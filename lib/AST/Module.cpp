@@ -472,9 +472,8 @@ ModuleDecl::ModuleDecl(Identifier name, ASTContext &ctx,
   ctx.addDestructorCleanup(*this);
   setImplicit();
   setInterfaceType(ModuleType::get(this));
-
   setAccess(AccessLevel::Public);
-
+  setUnderlyingName(ctx.lookupModuleAlias(name));
   Bits.ModuleDecl.TestingEnabled = 0;
   Bits.ModuleDecl.FailedToLoad = 0;
   Bits.ModuleDecl.RawResilienceStrategy = 0;
@@ -1378,6 +1377,12 @@ ImportedModule::removeDuplicates(SmallVectorImpl<ImportedModule> &imports) {
         return lhs.accessPath.isSameAs(rhs.accessPath);
       });
   imports.erase(last, imports.end());
+}
+
+Identifier ModuleDecl::getUnderlyingName() const {
+    if (!ModuleUnderlyingName.empty())
+        return ModuleUnderlyingName;
+    return getName();
 }
 
 Identifier ModuleDecl::getABIName() const {

@@ -33,6 +33,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MD5.h"
 #include <set>
@@ -170,6 +171,12 @@ class ModuleDecl : public DeclContext, public TypeDecl {
   /// The ABI name of the module, if it differs from the module name.
   mutable Identifier ModuleABIName;
 
+  /// The underlying name for an alias used for this module (if any).
+  mutable Identifier ModuleUnderlyingName;
+  
+  /// Mapping between aliases and underlying names of imported or referenced modules
+  mutable llvm::DenseMap<Identifier, Identifier> ModuleAliasMap;
+
 public:
   /// Produces the components of a given module's full name in reverse order.
   ///
@@ -277,7 +284,7 @@ public:
   }
 
   using Decl::getASTContext;
-
+  
   /// Retrieves information about which modules are implicitly imported by
   /// each file of this module.
   const ImplicitImportInfo &getImplicitImportInfo() const { return ImportInfo; }
@@ -354,6 +361,16 @@ public:
   /// Set the ABI name of the module;
   void setABIName(Identifier name) {
     ModuleABIName = name;
+  }
+
+  /// Retrieve the underlying name of the alias (if any) used for this module.
+  /// If no module alias is set, returns getName().
+  Identifier getUnderlyingName() const;
+  
+  /// If a module alias is used, set the corresponding underlying name.
+  /// It will be used for metadata and mangling.
+  void setUnderlyingName(Identifier name) {
+    ModuleUnderlyingName = name;
   }
 
 private:

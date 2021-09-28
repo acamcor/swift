@@ -1567,6 +1567,22 @@ void ASTContext::addModuleInterfaceChecker(
   getImpl().InterfaceChecker = std::move(checker);
 }
 
+void ASTContext::setModuleAliases(const llvm::StringMap<StringRef> &aliasMap) {
+  for (auto k: aliasMap.keys()) {
+    auto val = aliasMap.lookup(k);
+    ModuleAliasMap[getIdentifier(k)] = getIdentifier(val);
+  }
+}
+
+/// Retrieve the underlying module name given a module alias
+Identifier ASTContext::lookupModuleAlias(Identifier key) const {
+  auto found = ModuleAliasMap.find(key);
+  if (found != ModuleAliasMap.end()) {
+    return found->second;
+  }
+  return Identifier();
+}
+
 Optional<ModuleDependencies> ASTContext::getModuleDependencies(
     StringRef moduleName, bool isUnderlyingClangModule,
     ModuleDependenciesCache &cache, InterfaceSubContextDelegate &delegate,
@@ -1696,7 +1712,20 @@ ASTContext::getLoadedModules() const {
 }
 
 ModuleDecl *ASTContext::getLoadedModule(Identifier ModuleName) const {
-  return getImpl().LoadedModules.lookup(ModuleName);
+  auto list = getImpl().LoadedModules;
+  auto result = list.lookup(ModuleName);
+
+  if (!result) {
+    for (auto &mod : list) {
+      // Check if the module's underlying name matches the arg
+      if (mod.second->getUnderlyingName() == ModuleName) {
+         // If so, return this.
+         return mod.second;
+      }
+    }
+  }
+ 
+  return result;
 }
 
 void ASTContext::addLoadedModule(ModuleDecl *M) {
